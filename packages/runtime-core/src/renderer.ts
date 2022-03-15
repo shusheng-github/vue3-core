@@ -1770,6 +1770,7 @@ function baseCreateRenderer(
     // 1. sync from start
     // (a b) c
     // (a b) d e
+    // 头比较
     while (i <= e1 && i <= e2) {
       const n1 = c1[i]
       const n2 = (c2[i] = optimized
@@ -1796,6 +1797,7 @@ function baseCreateRenderer(
     // 2. sync from end
     // a (b c)
     // d e (b c)
+    // 尾比较
     while (i <= e1 && i <= e2) {
       const n1 = c1[e1]
       const n2 = (c2[e2] = optimized
@@ -1827,6 +1829,7 @@ function baseCreateRenderer(
     // (a b)
     // c (a b)
     // i = 0, e1 = -1, e2 = 0
+    // 头，尾比较完成之后，新节点有剩余，新增
     if (i > e1) {
       if (i <= e2) {
         const nextPos = e2 + 1
@@ -1857,6 +1860,7 @@ function baseCreateRenderer(
     // a (b c)
     // (b c)
     // i = 0, e1 = 0, e2 = -1
+    // 头，尾比较完成之后，老节点有剩余，删除
     else if (i > e2) {
       while (i <= e1) {
         unmount(c1[i], parentComponent, parentSuspense, true)
@@ -1893,9 +1897,9 @@ function baseCreateRenderer(
       // 5.2 loop through old children left to be patched and try to patch
       // matching nodes & remove nodes that are no longer present
       let j
-      let patched = 0
-      const toBePatched = e2 - s2 + 1
-      let moved = false
+      let patched = 0 //代表更新过的节点数量
+      const toBePatched = e2 - s2 + 1  //代表遍历旧的一组子节点的过程中遇到的最大索引值
+      let moved = false  //该字段标识是否应该移动dom节点
       // used to track whether any node has moved
       let maxNewIndexSoFar = 0
       // works as Map<newIndex, oldIndex>
@@ -1903,11 +1907,13 @@ function baseCreateRenderer(
       // and oldIndex = 0 is a special value indicating the new node has
       // no corresponding old node.
       // used for determining longest stable subsequence
+      // 新子节点的index索引值和旧子节点的index索引位置映射起来
       const newIndexToOldIndexMap = new Array(toBePatched)
       for (i = 0; i < toBePatched; i++) newIndexToOldIndexMap[i] = 0
 
       for (i = s1; i <= e1; i++) {
         const prevChild = c1[i]
+        // 如果更新过的节点数量大于需要更新的节点数量，则卸载多余的节点
         if (patched >= toBePatched) {
           // all new children have been patched so this can only be a removal
           unmount(prevChild, parentComponent, parentSuspense, true)
@@ -1954,14 +1960,19 @@ function baseCreateRenderer(
 
       // 5.3 move and mount
       // generate longest stable subsequence only when nodes have moved
+      // 如果moved为true，需要移动的时候，就使用getSequence函数计算最长递增子序列
       const increasingNewIndexSequence = moved
         ? getSequence(newIndexToOldIndexMap)
         : EMPTY_ARR
-      j = increasingNewIndexSequence.length - 1
+      j = increasingNewIndexSequence.length - 1  //j对应的是最长子序列的最后一个元素
       // looping backwards so that we can use last patched node as anchor
+      // i对应的是新节点数组的最后一个元素
       for (i = toBePatched - 1; i >= 0; i--) {
-        const nextIndex = s2 + i
+        // 该节点在新的一组子节点中的真实位置索引
+        const nextIndex = s2 + i 
+        //该节点的下一个节点的位置索引
         const nextChild = c2[nextIndex] as VNode
+        // 锚点
         const anchor =
           nextIndex + 1 < l2 ? (c2[nextIndex + 1] as VNode).el : parentAnchor
         if (newIndexToOldIndexMap[i] === 0) {
@@ -1978,6 +1989,7 @@ function baseCreateRenderer(
             optimized
           )
         } else if (moved) {
+          // 如果move为true，则需要移动DOM操作
           // move if:
           // There is no stable subsequence (e.g. a reverse)
           // OR current node is not among the stable sequence
