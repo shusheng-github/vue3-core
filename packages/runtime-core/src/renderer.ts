@@ -365,14 +365,16 @@ function baseCreateRenderer(
     if (n1 === n2) {
       return
     }
-
+    debugger
     // patching & not same type, unmount old tree
+    // patching & 不是相同类型的 VNode，则从节点树中卸载
     if (n1 && !isSameVNodeType(n1, n2)) {
       anchor = getNextHostNode(n1)
       unmount(n1, parentComponent, parentSuspense, true)
       n1 = null
     }
 
+    // PatchFlag 是 BAIL 类型，则跳出优化模式
     if (n2.patchFlag === PatchFlags.BAIL) {
       optimized = false
       n2.dynamicChildren = null
